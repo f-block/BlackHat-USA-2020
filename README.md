@@ -78,7 +78,7 @@ cp command.json_runshell command.json
 
 ### Detection
 
-The DLL and the [example shellcode](houdini/cnc_server/command.json_loadshellcode) each contain a unique token, which can be detected with the [token.yar](houdini/token.yar) YARA rule file, as long as they are currently mapped:
+The DLL and the [example shellcode](houdini/cnc_server/command.json_loadshellcode) each contain a unique token, which can be detected with the [tokens.yar](houdini/tokens.yar) YARA rule file, as long as they are currently mapped:
 - The DLL: `BLACKHAT_USA_2020_what.the.eyes.see.and.the.ears.hear..the.mind.believes_BLACKHAT_USA_2020`
 - The Shellcode: `AAAAAAAAAAAAAAAAAA_what.the.eyes.see.and.the.ears.hear..the.mind.believes_AAAAAAAAAAAAAAAAAA`
 
