@@ -17,6 +17,7 @@
 #define initial_stage_path L"/initial_sTage"
 #define reveal_command_timeout 60000
 #define loop_sleep_timeout 30000
+#define max_server_resp_size 1000000
 
 // TODO don't depend on static address in future release
 #define shared_dll_base (LPVOID)0x612345670000

